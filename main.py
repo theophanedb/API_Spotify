@@ -1,9 +1,12 @@
 import requests
 import json
 
-# Replace <client_id> and <client_secret> with your Spotify API credentials
-client_id = "<client_id>"
-client_secret = "<client_secret>"
+# The Spotify Web API requires authentication, using the OAuth 2.0 Authorization Framework
+# To know the possible requests and responses: https://developer.spotify.com/documentation/web-api/reference/#/
+
+# Spotify API credentials
+client_id = "ed03cad97e9b4488990adb37464254c4"
+client_secret = "980443c5071b47dfb188e8ab22dd83da"
 
 # Get the access token
 auth_response = requests.post("https://accounts.spotify.com/api/token",
@@ -14,20 +17,74 @@ auth_response = requests.post("https://accounts.spotify.com/api/token",
 
 if auth_response.status_code == 200:
     access_token = auth_response.json()["access_token"]
+
     headers = {
-        "Authorization": "Bearer " + access_token
+        "Authorization": "Bearer " + access_token,
+        "Content-Type": "application/json"
     }
 
-    # Replace <track_id> with the id of the track you want information about
-    track_id = "<track_id>"
+    query = "track:aegis artist:andre bratten"
 
-    # Get information about the track
-    track_response = requests.get(f"https://api.spotify.com/v1/tracks/{track_id}", headers=headers)
+    search_response = requests.get(
+        f"https://api.spotify.com/v1/search?q={query}&type=track",
+        headers=headers
+    )
 
-    if track_response.status_code == 200:
-        track_data = track_response.json()
-        print(json.dumps(track_data, indent=4))
+    track_id = ""
+
+    # Check if the request was successful
+    if search_response.status_code == 200:
+        # Parse the JSON data
+        data = search_response.json()
+
+        # Get the first track in the list of tracks
+        try:
+            track = data["tracks"]["items"][0]
+
+            # Get the track name, artist(s) & ID
+            track_name = track["name"]
+            track_artists = [artist["name"] for artist in track["artists"]]
+            track_id = track["id"]
+            album_id = track["album"]["id"]
+
+            print(f"Track: {track_name} by {', '.join(track_artists)} --> Track ID: {track_id} // Album ID: {album_id}")
+        except:
+            print("No track was found the specified query")
+
     else:
-        print(f"Failed to get track information: {track_response.json()}")
+        print("Search failed with status code", search_response.status_code)
+
+    if track_id != "":
+        '''
+        # Get information about the track
+        track_response = requests.get(f"https://api.spotify.com/v1/tracks/{track_id}", headers=headers)
+
+        if track_response.status_code == 200:
+            track_data = track_response.json()
+            print(json.dumps(track_data, indent=4))
+
+        else:
+            print(f"Failed to get track information: {track_response.json()}")
+        '''
+
+        # Get information about the album
+        album_response = requests.get(f"https://api.spotify.com/v1/albums/{album_id}", headers=headers)
+
+        if album_response.status_code == 200:
+            album_data = album_response.json()
+            
+            url_cover = album_data["images"][0]["url"]
+            genres = album_data["genres"]
+            release_date = album_data["release_date"]
+
+            print(f"URL of the cover: {url_cover}\nGenres: {genres}\nRealease Date: {release_date}")
+
+        else:
+            print(f"Failed to get album information: {album_response.json()}")
+
+        
+    else:
+        print("No track ID was found")
+
 else:
     print(f"Failed to get access token: {auth_response.json()}")
