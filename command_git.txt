@@ -1,0 +1,17 @@
+git init
+git config --global user.email "theophanedelbauffe@orange.fr"
+git config --global user.name "theophanedb"
+(...)
+git status
+git add .
+git commit -m "first commit"
+
+# create a repo on GitHub
+# clone this repo in a different the root folder 
+git clone https://github.com/theophanedb/API_Spotify
+cd .\API_Spotify\
+git remote add API_Spotify C:\Users\theop\Desktop\Projets-perso\API_Spotify
+git remote -v
+git fetch API_Spotify/master 
+git merge API_Spotify/master --allow-unrelated-histories
+git push origin main
