@@ -40,7 +40,7 @@ if auth_response.status_code == 200:
         # Parse the JSON data
         data = search_response.json()
 
-        # Get the first track in the list of tracks
+        # Get the first track in the list of returned tracks
         try:
             track = data["tracks"]["items"][0]
 
