@@ -1,12 +1,15 @@
-import requests
-import json
-
 # The Spotify Web API requires authentication, using the OAuth 2.0 Authorization Framework
 # To know the possible requests and responses: https://developer.spotify.com/documentation/web-api/reference/#/
 
-# Spotify API credentials
-client_id = "ed03cad97e9b4488990adb37464254c4"
-client_secret = "980443c5071b47dfb188e8ab22dd83da"
+import requests
+import json
+import configparser
+
+# Load the Spotify API credentials from the configuration file
+config = configparser.ConfigParser()
+config.read("./config.ini")
+client_id = config["DEFAULT"]["client_id"]
+client_secret = config["DEFAULT"]["client_secret"]
 
 # Get the access token
 auth_response = requests.post("https://accounts.spotify.com/api/token",
