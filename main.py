@@ -1,9 +1,8 @@
-# The Spotify Web API requires authentication, using the OAuth 2.0 Authorization Framework
-# To know the possible requests and responses: https://developer.spotify.com/documentation/web-api/reference/#/
-
 import requests
 import json
 import configparser
+
+# The Spotify Web API requires authentication, using the OAuth 2.0 Authorization Framework
 
 # Load the Spotify API credentials from the configuration file
 config = configparser.ConfigParser()
