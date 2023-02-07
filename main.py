@@ -17,6 +17,7 @@ auth_response = requests.post("https://accounts.spotify.com/api/token",
                               },
                               auth=(client_id, client_secret))
 
+# If the authentification was succesful, get information about a track
 if auth_response.status_code == 200:
     access_token = auth_response.json()["access_token"]
 
