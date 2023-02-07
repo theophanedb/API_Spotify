@@ -58,6 +58,7 @@ if auth_response.status_code == 200:
         print("Search failed with status code", search_response.status_code)
 
     if track_id != "":
+        
         '''
         # Get information about the track
         track_response = requests.get(f"https://api.spotify.com/v1/tracks/{track_id}", headers=headers)
