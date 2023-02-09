@@ -111,9 +111,7 @@ if __name__ == '__main__':
     else:
         for i in range(1, len(sys.argv)):
             QUERIES.append(sys.argv[i])
-    
-    print(QUERIES)
 
     infos = get_info(QUERIES, CLIENT_ID, CLIENT_SECRET)
-    print(infos)
+    print("\n\n", infos)
 
