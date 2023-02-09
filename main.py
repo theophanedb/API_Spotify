@@ -1,94 +1,119 @@
-import requests
-import json
 import configparser
+import json
+import requests
+import sys
 
-# The Spotify Web API requires authentication, using the OAuth 2.0 Authorization Framework
+def get_info(QUERIES, CLIENT_ID, CLIENT_SECRET):
 
-# Load the Spotify API credentials from the configuration file
-config = configparser.ConfigParser()
-config.read("./config.ini")
-client_id = config["DEFAULT"]["client_id"]
-client_secret = config["DEFAULT"]["client_secret"]
+    # Get the access token
+    auth_response = requests.post("https://accounts.spotify.com/api/token",
+                                data={
+                                    "grant_type": "client_credentials"
+                                },
+                                auth=(CLIENT_ID, CLIENT_SECRET))
 
-# Get the access token
-auth_response = requests.post("https://accounts.spotify.com/api/token",
-                              data={
-                                  "grant_type": "client_credentials"
-                              },
-                              auth=(client_id, client_secret))
+    # If the authentification was succesful, get information about tracks
 
-# If the authentification was succesful, get information about a track
-if auth_response.status_code == 200:
-    access_token = auth_response.json()["access_token"]
+    results = {}
 
-    headers = {
-        "Authorization": "Bearer " + access_token,
-        "Content-Type": "application/json"
-    }
+    if auth_response.status_code == 200:
+        access_token = auth_response.json()["access_token"]
 
-    query = "track:aegis artist:andre bratten"
+        headers = {
+            "Authorization": "Bearer " + access_token,
+            "Content-Type": "application/json"
+        }
 
-    search_response = requests.get(
-        f"https://api.spotify.com/v1/search?q={query}&type=track",
-        headers=headers
-    )
+        for QUERY in QUERIES:
 
-    track_id = ""
+            results[QUERY] = None
 
-    # Check if the request was successful
-    if search_response.status_code == 200:
-        # Parse the JSON data
-        data = search_response.json()
+            search_response = requests.get(
+                f"https://api.spotify.com/v1/search?q={QUERY}&type=track",
+                headers=headers
+            )
 
-        # Get the first track in the list of returned tracks
-        try:
-            track = data["tracks"]["items"][0]
+            # Check if the request was successful
+            if search_response.status_code == 200:
+                # Parse the JSON data
+                data = search_response.json()
+                track = None
+                try:
+                    # Get the first track in the list of returned tracks
+                    track = data["tracks"]["items"][0]
+                except:
+                    print(f"\nWARNING: No track was found for the specified query: {QUERY}\n")
 
-            # Get the track name, artist(s) & ID
-            track_name = track["name"]
-            track_artists = [artist["name"] for artist in track["artists"]]
-            track_id = track["id"]
-            album_id = track["album"]["id"]
+                if track != None:
+                    
+                    # Get the track name, artist(s) & album IDs
+                    track_name = track["name"]
+                    track_artists = {artist["name"]:artist["id"] for artist in track["artists"]}
+                    track_id = track["id"]
+                    album_id = track["album"]["id"]
+                    print(f"\nTrack: {track_name} by {', '.join(track_artists.keys())}\n--> Track ID: {track_id}\n--> Album ID: {album_id}")
 
-            print(f"Track: {track_name} by {', '.join(track_artists)} --> Track ID: {track_id} // Album ID: {album_id}")
-        except:
-            print("No track was found the specified query")
+
+                    # Get information about the album
+                    album = track["album"]
+                    album_name = album["name"]
+                    release_date = album["release_date"]
+                    url_cover = album["images"][0]["url"]
+                    print(f"--> Name of the album: {album_name}\n--> Release Date: {release_date}\n--> Cover URL: {url_cover}")
+
+
+                    # Get the genres associated to each artist
+                    all_genres = []
+                    print("--> Artist(s)'s genres:")
+                    for artist, id in track_artists.items():
+                        # Get information about the track
+                        artist_response = requests.get(f"https://api.spotify.com/v1/artists/{id}", headers=headers)
+                        if artist_response.status_code == 200:
+                            artist_data = artist_response.json()
+                            genres = artist_data["genres"]
+                            all_genres.extend(genres)
+                        else:
+                            print(f"Failed to get track information: {artist_response.json()}")
+
+                        print(f"\t{artist}: {genres}")
+                    
+                    all_genres = set(all_genres)
+                    print("--> Genres: ", " - ".join([genre for genre in all_genres]))
+
+                    results[QUERY] = [album_name, release_date, url_cover, all_genres]
+
+            else:
+                print("Track search failed with status code", search_response.status_code)
 
     else:
-        print("Search failed with status code", search_response.status_code)
+        print(f"Failed to get access token: {auth_response.json()}")
 
-    if track_id != "":
-        
-        '''
-        # Get information about the track
-        track_response = requests.get(f"https://api.spotify.com/v1/tracks/{track_id}", headers=headers)
+    return results
 
-        if track_response.status_code == 200:
-            track_data = track_response.json()
-            print(json.dumps(track_data, indent=4))
 
-        else:
-            print(f"Failed to get track information: {track_response.json()}")
-        '''
 
-        # Get information about the album
-        album_response = requests.get(f"https://api.spotify.com/v1/albums/{album_id}", headers=headers)
 
-        if album_response.status_code == 200:
-            album_data = album_response.json()
-            
-            url_cover = album_data["images"][0]["url"]
-            genres = album_data["genres"]
-            release_date = album_data["release_date"]
+if __name__ == '__main__':
 
-            print(f"URL of the cover: {url_cover}\nGenres: {genres}\nRealease Date: {release_date}")
+    # The Spotify Web API requires authentication, using the OAuth 2.0 Authorization Framework
+    # Load the Spotify API credentials from the configuration file
+    CONFIG = configparser.ConfigParser()
+    CONFIG.read("./config.ini")
+    CLIENT_ID = CONFIG["DEFAULT"]["client_id"]
+    CLIENT_SECRET = CONFIG["DEFAULT"]["client_secret"]
 
-        else:
-            print(f"Failed to get album information: {album_response.json()}")
+    DEFAULT_QUERY = ["Aegis - Andre Bratten"]
+    QUERIES = []
 
-        
+    if len(sys.argv) == 1:      
+        print(f"\nWARNING: No query was given. The default query '{DEFAULT_QUERY}' will be used.\n")
+        QUERIES = DEFAULT_QUERY
     else:
-        print("No track ID was found")
+        for i in range(1, len(sys.argv)):
+            QUERIES.append(sys.argv[i])
+    
+    print(QUERIES)
 
-else:
-    print(f"Failed to get access token: {auth_response.json()}")
+    infos = get_info(QUERIES, CLIENT_ID, CLIENT_SECRET)
+    print(infos)
+
